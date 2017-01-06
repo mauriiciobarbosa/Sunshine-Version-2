@@ -24,6 +24,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 
+import static com.example.android.sunshine.app.data.WeatherContract.CONTENT_AUTHORITY;
+import static com.example.android.sunshine.app.data.WeatherContract.PATH_LOCATION;
+import static com.example.android.sunshine.app.data.WeatherContract.PATH_WEATHER;
+
 public class WeatherProvider extends ContentProvider {
 
     // The URI Matcher used by this content provider.
@@ -67,6 +71,8 @@ public class WeatherProvider extends ContentProvider {
             WeatherContract.LocationEntry.TABLE_NAME +
                     "." + WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING + " = ? AND " +
                     WeatherContract.WeatherEntry.COLUMN_DATE + " = ? ";
+
+    private static final String sLocationSetting = "1 = 1 GROUP BY " + WeatherContract.LocationEntry._ID;
 
     private Cursor getWeatherByLocationSetting(Uri uri, String[] projection, String sortOrder) {
         String locationSetting = WeatherContract.WeatherEntry.getLocationSettingFromUri(uri);
@@ -117,14 +123,18 @@ public class WeatherProvider extends ContentProvider {
     static UriMatcher buildUriMatcher() {
         // 1) The code passed into the constructor represents the code to return for the root
         // URI.  It's common to use NO_MATCH as the code for this case. Add the constructor below.
-
+        UriMatcher matcher = new UriMatcher(UriMatcher.NO_MATCH);
 
         // 2) Use the addURI function to match each of the types.  Use the constants from
         // WeatherContract to help define the types to the UriMatcher.
+        matcher.addURI(CONTENT_AUTHORITY, PATH_WEATHER, WEATHER);
+        matcher.addURI(CONTENT_AUTHORITY, PATH_WEATHER + "/*", WEATHER_WITH_LOCATION);
+        matcher.addURI(CONTENT_AUTHORITY, PATH_WEATHER + "/*/#", WEATHER_WITH_LOCATION_AND_DATE);
+        matcher.addURI(CONTENT_AUTHORITY, PATH_LOCATION, LOCATION);
 
 
         // 3) Return the new matcher!
-        return null;
+        return matcher;
     }
 
     /*
@@ -150,8 +160,10 @@ public class WeatherProvider extends ContentProvider {
 
         switch (match) {
             // Student: Uncomment and fill out these two cases
-//            case WEATHER_WITH_LOCATION_AND_DATE:
-//            case WEATHER_WITH_LOCATION:
+            case WEATHER_WITH_LOCATION_AND_DATE:
+                return WeatherContract.WeatherEntry.CONTENT_ITEM_TYPE;
+            case WEATHER_WITH_LOCATION:
+                return WeatherContract.WeatherEntry.CONTENT_TYPE;
             case WEATHER:
                 return WeatherContract.WeatherEntry.CONTENT_TYPE;
             case LOCATION:
@@ -181,12 +193,26 @@ public class WeatherProvider extends ContentProvider {
             }
             // "weather"
             case WEATHER: {
-                retCursor = null;
+                retCursor = mOpenHelper.getReadableDatabase().query(
+                        WeatherContract.WeatherEntry.TABLE_NAME,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null,
+                        null,
+                        sortOrder);
                 break;
             }
             // "location"
             case LOCATION: {
-                retCursor = null;
+                retCursor = mOpenHelper.getReadableDatabase().query(
+                        WeatherContract.LocationEntry.TABLE_NAME,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null,
+                        null,
+                        sortOrder);
                 break;
             }
 
